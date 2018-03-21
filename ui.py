@@ -4,14 +4,23 @@ from curses.textpad import Textbox
 
 CURRENT_WINDOW = None 
 
+
 class CommandEvent:
     def __init__(self, command):
         self.command = command
 
-
 class EventListener:
     def listen(self, event):
         return
+
+class Supervisor(EventListener):
+    def __init__(self):
+        self.exit = False
+
+    def listen(self, event):
+        if isinstance(event, CommandEvent):
+            if event.command == ':q':
+                self.exit = True
 
 class EventDispatcher(EventListener):
     def __init__(self):
@@ -95,7 +104,7 @@ class TopicWindow(EventListener):
 
     def listen(self, event):
         if isinstance(event, CommandEvent):
-            self.win.addstr(command_win.last_command)
+            self.win.addstr(event.command)
             self.refresh()
 
 
@@ -112,7 +121,12 @@ def mainloop():
     command_win = CommandWindow(textbox)
     global CURRENT_WINDOW, EVENT_DISPATCHER
     EVENT_DISPATCHER.register(topic_bar)
+    supervisor = Supervisor()
+    EVENT_DISPATCHER.register(supervisor)
+    
     while True:
+        if supervisor.exit:
+            break
         c = textwin.getch()
         if c == ord('p'):
             list_win.load_list(["blabla", "blabla2"])
@@ -126,10 +140,7 @@ def mainloop():
             CURRENT_WINDOW = command_win
             command_win.refresh()
         elif c in (curses.KEY_ENTER, 10):
-            topic_bar.win.addstr(command_win.last_command)
-            topic_bar.refresh()
-            command_win.last_command = ''
-            command_win.win.erase()
+            command_win.submit_command()
             CURRENT_WINDOW = list_win
         elif CURRENT_WINDOW == command_win:
             command_win.addchr(chr(c))
