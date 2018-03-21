@@ -154,11 +154,12 @@ def mainloop():
     stdscr = curses.initscr()
     curses.start_color()
     curses.noecho()
+    max_y, max_x = stdscr.getmaxyx()
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
     curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_WHITE)
-    topic_bar = TopicWindow(curses.newwin(2, 80))
-    list_win = ListWin(curses.newwin(21, 40, 1, 0))
-    textwin = curses.newwin(3, 80, 22, 0)
+    topic_bar = TopicWindow(curses.newwin(2, max_x))
+    list_win = ListWin(curses.newwin(max_y-2, max_x, 1, 0))
+    textwin = curses.newwin(1, max_x, max_y-1, 0)
     textbox = Textbox(textwin)
     command_win = CommandWindow(textbox)
     global CURRENT_WINDOW, EVENT_DISPATCHER
@@ -166,9 +167,24 @@ def mainloop():
     EVENT_DISPATCHER.register(topic_bar)
     EVENT_DISPATCHER.register(supervisor)
     EVENT_DISPATCHER.register(list_win)
+    def resize_windows(new_y, new_x):
+        topic_bar.win.resize(2, new_x)
+        topic_bar.win.redrawwin()
+        topic_bar.win.refresh()
+        list_win.win.resize(new_y-2, new_x)
+        list_win.win.redrawwin()
+        list_win.win.refresh()
+        textwin.resize(1, new_x)
+        textwin.mvwin(new_y-1, 0)
+        textwin.redrawwin()
+        textwin.refresh()
+
     
     while not supervisor.exit:
         c = textwin.getch()
+        if curses.is_term_resized(max_y, max_x):
+            max_y, max_x = stdscr.getmaxyx()
+            resize_windows(max_y, max_x)
         if c == curses.KEY_UP:
             CURRENT_WINDOW = list_win
             list_win.decrease_index()
