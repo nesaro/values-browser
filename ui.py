@@ -1,7 +1,30 @@
 import curses
-from curses.textpad import Textbox, rectangle
+from curses.textpad import Textbox
 
-class ListWin:
+
+CURRENT_WINDOW = None 
+
+class CommandEvent:
+    def __init__(self, command):
+        self.command = command
+
+
+class EventListener:
+    def listen(self, event):
+        return
+
+class EventDispatcher(EventListener):
+    def __init__(self):
+        self.listeners = []
+
+    def register(self, listener):
+        self.listeners.append(listener)
+
+    def listen(self, event):
+        for x in self.listeners:
+            x.listen(event)
+
+class ListWin(EventListener):
     def __init__(self, window):
         self.win = window
         self.win.border()
@@ -35,36 +58,81 @@ class ListWin:
             self.win.addstr(element, attributes)
         self.win.refresh()
 
+EVENT_DISPATCHER = EventDispatcher()
+
+class CommandWindow(EventListener):
+    def __init__(self, textbox):
+        self.textbox = textbox
+        self.win = textbox.win
+        self.last_command = ''
+        self.refresh()
+
+    def refresh(self):
+        self.win.move(0,0)
+        if CURRENT_WINDOW is self:
+            self.win.addstr('$', curses.color_pair(2))
+        self.win.addstr(self.last_command)
+        self.win.refresh()
+
+    def addchr(self, char):
+        self.last_command += char
+        self.refresh()
+
+    def submit_command(self):
+        EVENT_DISPATCHER.listen(CommandEvent(self.last_command))
+        self.last_command = ''
+        self.win.erase()
+
+class TopicWindow(EventListener):
+    def __init__(self, window):
+        self.win = window
+        self.win.move(0, 1)
+        self.win.addstr('TOPIC', curses.color_pair(1))
+        self.refresh()
+
+    def refresh(self):
+        self.win.refresh()
+
+    def listen(self, event):
+        if isinstance(event, CommandEvent):
+            self.win.addstr(command_win.last_command)
+            self.refresh()
 
 
 def mainloop():
     stdscr = curses.initscr()
-    topic_bar = curses.newwin(2, 80)
-    topic_bar.border()
-    topic_bar.move(0, 1)
-    topic_bar.addstr('TOPIC')
-    topic_bar.refresh()
-    win = curses.newwin(21, 40, 1, 0)
-    list_win = ListWin(win)
-    textwin = curses.newwin(3, 80, 21, 0)
+    curses.start_color()
+    curses.noecho()
+    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
+    curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_WHITE)
+    topic_bar = TopicWindow(curses.newwin(2, 80))
+    list_win = ListWin(curses.newwin(21, 40, 1, 0))
+    textwin = curses.newwin(3, 80, 22, 0)
     textbox = Textbox(textwin)
-    last_command = ''
+    command_win = CommandWindow(textbox)
+    global CURRENT_WINDOW, EVENT_DISPATCHER
+    EVENT_DISPATCHER.register(topic_bar)
     while True:
         c = textwin.getch()
         if c == ord('p'):
             list_win.load_list(["blabla", "blabla2"])
         elif c == curses.KEY_UP:
+            CURRENT_WINDOW = list_win
             list_win.decrease_index()
         elif c == curses.KEY_DOWN:
+            CURRENT_WINDOW = list_win
             list_win.increase_index()
-        elif c == ord('q'):
-            break  # Exit the while loop
+        elif c == 27:
+            CURRENT_WINDOW = command_win
+            command_win.refresh()
         elif c in (curses.KEY_ENTER, 10):
-            topic_bar.addstr(last_command)
+            topic_bar.win.addstr(command_win.last_command)
             topic_bar.refresh()
-            last_command = ''
-        else:
-            last_command += chr(c)
+            command_win.last_command = ''
+            command_win.win.erase()
+            CURRENT_WINDOW = list_win
+        elif CURRENT_WINDOW == command_win:
+            command_win.addchr(chr(c))
         list_win.refresh()
 
 if __name__ == "__main__":
