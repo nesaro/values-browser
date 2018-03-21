@@ -51,10 +51,11 @@ class EventDispatcher(EventListener):
             x.listen(event)
 
 class ListWin(EventListener):
-    def __init__(self, window):
+    def __init__(self, window, subpad):
         self.win = window
         self.win.border()
         self.win.refresh()
+        self.subpad = subpad
         self.current_element = None
         self.current_service = None
         self.current_extra = None
@@ -91,17 +92,20 @@ class ListWin(EventListener):
             self.refresh()
 
     def refresh(self):
+        win_y, win_x = self.win.getmaxyx()
+        self.subpad.resize(max(len(self.content), 1),
+                           max(win_x - 1, 1))
         for index, element in enumerate(self.content):
-            if index >= self.win.getmaxyx()[0] - 2:
-                break
-            self.win.move(index + 1, 1)
+            self.subpad.move(index, 1)
             attributes = 0
             if element == self.current_element:
                 attributes |= curses.A_BOLD
             if index == self.current_index:
                 attributes |= curses.A_BLINK
-            self.win.addstr(element, attributes)
+            self.subpad.addstr(element, attributes)
         self.win.refresh()
+        self.win.border()
+        self.subpad.refresh(0, 0, 3, 1, win_y - 1, win_x - 1)
 
     def submit_change(self):
         import os.path
@@ -158,7 +162,7 @@ def mainloop():
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
     curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_WHITE)
     topic_bar = TopicWindow(curses.newwin(2, max_x))
-    list_win = ListWin(curses.newwin(max_y-2, max_x, 1, 0))
+    list_win = ListWin(curses.newwin(max_y-2, max_x, 1, 0), curses.newpad(20, 20))
     textwin = curses.newwin(1, max_x, max_y-1, 0)
     textbox = Textbox(textwin)
     command_win = CommandWindow(textbox)
