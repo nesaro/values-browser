@@ -46,8 +46,9 @@ def mainloop():
     topic_bar.refresh()
     win = curses.newwin(21, 40, 1, 0)
     list_win = ListWin(win)
-    textwin = curses.newwin(80, 3, 23, 0)
+    textwin = curses.newwin(3, 80, 21, 0)
     textbox = Textbox(textwin)
+    last_command = ''
     while True:
         c = textwin.getch()
         if c == ord('p'):
@@ -58,6 +59,12 @@ def mainloop():
             list_win.increase_index()
         elif c == ord('q'):
             break  # Exit the while loop
+        elif c in (curses.KEY_ENTER, 10):
+            topic_bar.addstr(last_command)
+            topic_bar.refresh()
+            last_command = ''
+        else:
+            last_command += chr(c)
         list_win.refresh()
 
 if __name__ == "__main__":
