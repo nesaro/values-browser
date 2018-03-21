@@ -5,9 +5,21 @@ from curses.textpad import Textbox
 CURRENT_WINDOW = None 
 
 
+class FileService:
+    @staticmethod
+    def to_list(path):
+        import os
+        return list(os.listdir(path))
+        raise Exception(os.listdir(path))
+
 class CommandEvent:
     def __init__(self, command):
         self.command = command
+
+class ChangeContentProviderEvent:
+    def __init__(self, service, extra):
+        self.service = service
+        self.extra = extra
 
 class EventListener:
     def listen(self, event):
@@ -21,6 +33,11 @@ class Supervisor(EventListener):
         if isinstance(event, CommandEvent):
             if event.command == ':q':
                 self.exit = True
+            if event.command.startswith('file'):
+                command = event.command[4:]
+                command = command.lstrip()
+                EVENT_DISPATCHER.listen(ChangeContentProviderEvent(FileService, command))
+                
 
 class EventDispatcher(EventListener):
     def __init__(self):
@@ -52,12 +69,17 @@ class ListWin(EventListener):
     def increase_index(self):
         self.__current_index = min(self.__current_index +1 , len(self.content) - 1)
 
-    def load_list(self, iterable):
-        self.win.border()
-        self.content = iterable
+    def listen(self, event):
+        if isinstance(event, ChangeContentProviderEvent):
+            self.content = event.service.to_list(event.extra)
+            self.win.erase()
+            self.win.border()
+            self.refresh()
 
     def refresh(self):
         for index, element in enumerate(self.content):
+            if index >= self.win.getmaxyx()[0] - 1:
+                break
             self.win.move(index + 1, 1)
             attributes = 0
             if element == self.current_element:
@@ -123,14 +145,11 @@ def mainloop():
     EVENT_DISPATCHER.register(topic_bar)
     supervisor = Supervisor()
     EVENT_DISPATCHER.register(supervisor)
+    EVENT_DISPATCHER.register(list_win)
     
-    while True:
-        if supervisor.exit:
-            break
+    while not supervisor.exit:
         c = textwin.getch()
-        if c == ord('p'):
-            list_win.load_list(["blabla", "blabla2"])
-        elif c == curses.KEY_UP:
+        if c == curses.KEY_UP:
             CURRENT_WINDOW = list_win
             list_win.decrease_index()
         elif c == curses.KEY_DOWN:
