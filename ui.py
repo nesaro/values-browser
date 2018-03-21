@@ -56,29 +56,43 @@ class ListWin(EventListener):
         self.win.border()
         self.win.refresh()
         self.current_element = None
+        self.current_service = None
+        self.current_extra = None
         self.__current_index = 0
-        self.content = []
 
     @property
     def current_index(self):
         return self.__current_index
 
     def decrease_index(self):
-        self.__current_index = max(self.__current_index - 1 , 0)
+        self.__current_index = min(len(self.content) -1,
+                                   max(self.__current_index - 1 , 0))
+        if self.content:
+            self.current_element = self.content[self.__current_index]
 
     def increase_index(self):
         self.__current_index = min(self.__current_index +1 , len(self.content) - 1)
+        if self.content:
+            self.current_element = self.content[self.__current_index]
+
+    @property
+    def content(self):
+        try:
+            return self.current_service.to_list(self.current_extra)
+        except AttributeError:
+            return []
 
     def listen(self, event):
         if isinstance(event, ChangeContentProviderEvent):
-            self.content = event.service.to_list(event.extra)
+            self.current_service = event.service
+            self.current_extra = event.extra
             self.win.erase()
             self.win.border()
             self.refresh()
 
     def refresh(self):
         for index, element in enumerate(self.content):
-            if index >= self.win.getmaxyx()[0] - 1:
+            if index >= self.win.getmaxyx()[0] - 2:
                 break
             self.win.move(index + 1, 1)
             attributes = 0
@@ -88,6 +102,12 @@ class ListWin(EventListener):
                 attributes |= curses.A_BLINK
             self.win.addstr(element, attributes)
         self.win.refresh()
+
+    def submit_change(self):
+        import os.path
+        EVENT_DISPATCHER.listen(ChangeContentProviderEvent(self.current_service,
+                                                           os.path.join(self.current_extra,
+                                                                        self.current_element)))
 
 EVENT_DISPATCHER = EventDispatcher()
 
@@ -142,8 +162,8 @@ def mainloop():
     textbox = Textbox(textwin)
     command_win = CommandWindow(textbox)
     global CURRENT_WINDOW, EVENT_DISPATCHER
-    EVENT_DISPATCHER.register(topic_bar)
     supervisor = Supervisor()
+    EVENT_DISPATCHER.register(topic_bar)
     EVENT_DISPATCHER.register(supervisor)
     EVENT_DISPATCHER.register(list_win)
     
@@ -159,8 +179,11 @@ def mainloop():
             CURRENT_WINDOW = command_win
             command_win.refresh()
         elif c in (curses.KEY_ENTER, 10):
-            command_win.submit_command()
-            CURRENT_WINDOW = list_win
+            if CURRENT_WINDOW == command_win:
+                command_win.submit_command()
+                CURRENT_WINDOW = list_win
+            elif CURRENT_WINDOW == list_win:
+                list_win.submit_change()
         elif CURRENT_WINDOW == command_win:
             command_win.addchr(chr(c))
         list_win.refresh()
