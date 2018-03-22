@@ -65,6 +65,17 @@ class ListWin(EventListener):
         self.__current_index = 0
 
     @property
+    def row_size(self):
+        max_y, _ = self.win.getmaxyx()
+        return max_y - 2
+
+    @property
+    def current_page(self):
+        if not self.content:
+            return 0
+        return self.current_index // self.row_size
+
+    @property
     def current_index(self):
         if not self.content:
             return 0
@@ -77,12 +88,13 @@ class ListWin(EventListener):
         except IndexError:
             raise AttributeError
 
-    def decrease_index(self):
-        self.__current_index = min(len(self.content) -1,
-                                   max(self.__current_index - 1 , 0))
+    def decrease_index(self, amount=1):
+        self.__current_index = min(len(self.content) - 1,
+                                   max(self.__current_index - amount , 0))
 
-    def increase_index(self):
-        self.__current_index = min(self.__current_index +1 , len(self.content) - 1)
+    def increase_index(self, amount=1):
+        self.__current_index = min(self.__current_index + amount,
+                                   len(self.content) - 1)
 
     @property
     def content(self):
@@ -113,7 +125,7 @@ class ListWin(EventListener):
             self.subpad.addstr(element, attributes)
         self.win.refresh()
         self.win.border()
-        self.subpad.refresh(0, 0, 3, 1, win_y - 1, win_x - 1)
+        self.subpad.refresh(self.current_page * (win_y - 2) , 0, 2, 1, win_y - 1, win_x - 1)
 
     def submit_change(self):
         import os.path
@@ -202,6 +214,12 @@ def mainloop():
         elif c == curses.KEY_DOWN:
             CURRENT_WINDOW = list_win
             list_win.increase_index()
+        elif c == curses.KEY_NPAGE:
+            CURRENT_WINDOW = list_win
+            list_win.increase_index(20)
+        elif c == curses.KEY_PPAGE:
+            CURRENT_WINDOW = list_win
+            list_win.decrease_index(20)
         elif c == 27:
             CURRENT_WINDOW = command_win
             command_win.refresh()
