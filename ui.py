@@ -4,22 +4,26 @@ from curses.textpad import Textbox
 
 CURRENT_WINDOW = None 
 
+#Change contentprovider event to url changed, 
+#create class to associate URL to content provider
+#put the content provider and the url on the topic bar
 
-class FileService:
+
+class DirectoryListService:
     @staticmethod
     def to_list(path):
         import os
-        return list(os.listdir(path))
+        return sorted(list(os.listdir(path)))
         raise Exception(os.listdir(path))
 
 class CommandEvent:
     def __init__(self, command):
         self.command = command
 
-class ChangeContentProviderEvent:
-    def __init__(self, service, extra):
+class ChangeURLService:
+    def __init__(self, service, url):
         self.service = service
-        self.extra = extra
+        self.url = url
 
 class EventListener:
     def listen(self, event):
@@ -36,7 +40,7 @@ class Supervisor(EventListener):
             if event.command.startswith('file'):
                 command = event.command[4:]
                 command = command.lstrip()
-                EVENT_DISPATCHER.listen(ChangeContentProviderEvent(FileService, command))
+                EVENT_DISPATCHER.listen(ChangeURLService(DirectoryListService, command))
                 
 
 class EventDispatcher(EventListener):
@@ -56,37 +60,41 @@ class ListWin(EventListener):
         self.win.border()
         self.win.refresh()
         self.subpad = subpad
-        self.current_element = None
         self.current_service = None
-        self.current_extra = None
+        self.current_url = None
         self.__current_index = 0
 
     @property
     def current_index(self):
-        return self.__current_index
+        if not self.content:
+            return 0
+        return max(0, min(self.__current_index, len(self.content) - 1))
+
+    @property
+    def current_element(self):
+        try:
+            return self.content[self.current_index]
+        except IndexError:
+            raise AttributeError
 
     def decrease_index(self):
         self.__current_index = min(len(self.content) -1,
                                    max(self.__current_index - 1 , 0))
-        if self.content:
-            self.current_element = self.content[self.__current_index]
 
     def increase_index(self):
         self.__current_index = min(self.__current_index +1 , len(self.content) - 1)
-        if self.content:
-            self.current_element = self.content[self.__current_index]
 
     @property
     def content(self):
         try:
-            return self.current_service.to_list(self.current_extra)
+            return self.current_service.to_list(self.current_url)
         except AttributeError:
             return []
 
     def listen(self, event):
-        if isinstance(event, ChangeContentProviderEvent):
+        if isinstance(event, ChangeURLService):
             self.current_service = event.service
-            self.current_extra = event.extra
+            self.current_url = event.url
             self.win.erase()
             self.win.border()
             self.refresh()
@@ -109,9 +117,9 @@ class ListWin(EventListener):
 
     def submit_change(self):
         import os.path
-        EVENT_DISPATCHER.listen(ChangeContentProviderEvent(self.current_service,
-                                                           os.path.join(self.current_extra,
-                                                                        self.current_element)))
+        EVENT_DISPATCHER.listen(ChangeURLService(self.current_service,
+                                                 os.path.join(self.current_url,
+                                                              self.current_element)))
 
 EVENT_DISPATCHER = EventDispatcher()
 
