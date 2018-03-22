@@ -4,7 +4,6 @@ from curses.textpad import Textbox
 
 CURRENT_WINDOW = None 
 
-#Change contentprovider event to url changed, 
 #create class to associate URL to content provider
 #put the content provider and the url on the topic bar
 
@@ -20,7 +19,7 @@ class CommandEvent:
     def __init__(self, command):
         self.command = command
 
-class ChangeURLService:
+class ChangeURLServiceEvent:
     def __init__(self, service, url):
         self.service = service
         self.url = url
@@ -37,10 +36,10 @@ class Supervisor(EventListener):
         if isinstance(event, CommandEvent):
             if event.command == ':q':
                 self.exit = True
-            if event.command.startswith('file'):
+            if event.command.startswith('dir'):
                 command = event.command[4:]
                 command = command.lstrip()
-                EVENT_DISPATCHER.listen(ChangeURLService(DirectoryListService, command))
+                EVENT_DISPATCHER.listen(ChangeURLServiceEvent(DirectoryListService, command))
                 
 
 class EventDispatcher(EventListener):
@@ -104,7 +103,7 @@ class ListWin(EventListener):
             return []
 
     def listen(self, event):
-        if isinstance(event, ChangeURLService):
+        if isinstance(event, ChangeURLServiceEvent):
             self.current_service = event.service
             self.current_url = event.url
             self.win.erase()
@@ -129,7 +128,7 @@ class ListWin(EventListener):
 
     def submit_change(self):
         import os.path
-        EVENT_DISPATCHER.listen(ChangeURLService(self.current_service,
+        EVENT_DISPATCHER.listen(ChangeURLServiceEvent(self.current_service,
                                                  os.path.join(self.current_url,
                                                               self.current_element)))
 
@@ -163,8 +162,10 @@ class TopicWindow(EventListener):
         self.win.refresh()
 
     def listen(self, event):
-        if isinstance(event, CommandEvent):
-            self.win.addstr(event.command)
+        if isinstance(event, ChangeURLServiceEvent):
+            self.win.erase()
+            self.win.move(0, 1)
+            self.win.addstr(event.service.__name__ + ' ' + event.url)
             self.refresh()
 
 
@@ -176,7 +177,7 @@ def mainloop():
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
     curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_WHITE)
     topic_bar = TopicWindow(curses.newwin(2, max_x))
-    list_win = ListWin(curses.newwin(max_y-2, max_x, 1, 0), curses.newpad(20, 20))
+    list_win = ListWin(curses.newwin(max_y - 2, max_x, 1, 0), curses.newpad(20, 20))
     textwin = curses.newwin(1, max_x, max_y-1, 0)
     textbox = Textbox(textwin)
     command_win = CommandWindow(textbox)
