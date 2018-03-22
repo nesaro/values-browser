@@ -15,14 +15,29 @@ class DirectoryListService:
         return sorted(list(os.listdir(path)))
         raise Exception(os.listdir(path))
 
+    @staticmethod
+    def test_url(path):
+        import os
+        return os.path.isdir(path)
+
 class CommandEvent:
     def __init__(self, command):
         self.command = command
 
-class ChangeURLServiceEvent:
+class InvalidURLServiceError:
+    def __init__(self, event):
+        self.event = event
+
+class RequestChangeURLServiceEvent:
     def __init__(self, service, url):
         self.service = service
         self.url = url
+
+class ChangedURLServiceEvent:
+    def __init__(self, service, url):
+        self.service = service
+        self.url = url
+
 
 class EventListener:
     def listen(self, event):
@@ -39,7 +54,7 @@ class Supervisor(EventListener):
             if event.command.startswith('dir'):
                 command = event.command[4:]
                 command = command.lstrip()
-                EVENT_DISPATCHER.listen(ChangeURLServiceEvent(DirectoryListService, command))
+                EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(DirectoryListService, command))
                 
 
 class EventDispatcher(EventListener):
@@ -103,7 +118,10 @@ class ListWin(EventListener):
             return []
 
     def listen(self, event):
-        if isinstance(event, ChangeURLServiceEvent):
+        if isinstance(event, RequestChangeURLServiceEvent):
+            if not event.service.test_url(event.url):
+                EVENT_DISPATCHER.listen(InvalidURLServiceError(event))
+                return
             self.current_service = event.service
             self.current_url = event.url
             self.win.erase()
@@ -128,9 +146,13 @@ class ListWin(EventListener):
 
     def submit_change(self):
         import os.path
-        EVENT_DISPATCHER.listen(ChangeURLServiceEvent(self.current_service,
-                                                 os.path.join(self.current_url,
-                                                              self.current_element)))
+        try:
+            element = self.current_element
+        except AttributeError:
+            return
+        EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(self.current_service,
+                                                      os.path.join(self.current_url,
+                                                                   element)))
 
 EVENT_DISPATCHER = EventDispatcher()
 
@@ -141,6 +163,7 @@ class CommandWindow(EventListener):
         self.refresh()
 
     def refresh(self):
+        self.win.erase()
         self.win.move(0,0)
         if CURRENT_WINDOW is self:
             self.win.addstr('$', curses.color_pair(2))
@@ -150,6 +173,13 @@ class CommandWindow(EventListener):
         last_command = last_command.lstrip('$').rstrip()
         EVENT_DISPATCHER.listen(CommandEvent(last_command))
         self.win.erase()
+
+    def listen(self, event):
+        if isinstance(event, InvalidURLServiceError):
+            self.win.move(0, 0)
+            self.win.addstr('INVALID URL {} for service {}'.format(event.event.url,
+                                                                   event.event.service.__name__))
+            self.win.refresh()
 
 class TopicWindow(EventListener):
     def __init__(self, window):
@@ -162,7 +192,7 @@ class TopicWindow(EventListener):
         self.win.refresh()
 
     def listen(self, event):
-        if isinstance(event, ChangeURLServiceEvent):
+        if isinstance(event, ChangedURLServiceEvent):
             self.win.erase()
             self.win.move(0, 1)
             self.win.addstr(event.service.__name__ + ' ' + event.url)
@@ -186,6 +216,7 @@ def mainloop():
     EVENT_DISPATCHER.register(topic_bar)
     EVENT_DISPATCHER.register(supervisor)
     EVENT_DISPATCHER.register(list_win)
+    EVENT_DISPATCHER.register(command_win)
     def resize_windows(new_y, new_x):
         topic_bar.win.resize(2, new_x)
         topic_bar.win.redrawwin()
