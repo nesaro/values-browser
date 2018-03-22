@@ -119,23 +119,17 @@ class CommandWindow(EventListener):
     def __init__(self, textbox):
         self.textbox = textbox
         self.win = textbox.win
-        self.last_command = ''
         self.refresh()
 
     def refresh(self):
         self.win.move(0,0)
         if CURRENT_WINDOW is self:
             self.win.addstr('$', curses.color_pair(2))
-        self.win.addstr(self.last_command)
         self.win.refresh()
 
-    def addchr(self, char):
-        self.last_command += char
-        self.refresh()
-
-    def submit_command(self):
-        EVENT_DISPATCHER.listen(CommandEvent(self.last_command))
-        self.last_command = ''
+    def submit_command(self, last_command):
+        last_command = last_command.lstrip('$').rstrip()
+        EVENT_DISPATCHER.listen(CommandEvent(last_command))
         self.win.erase()
 
 class TopicWindow(EventListener):
@@ -185,10 +179,15 @@ def mainloop():
 
     
     while not supervisor.exit:
-        c = textwin.getch()
         if curses.is_term_resized(max_y, max_x):
             max_y, max_x = stdscr.getmaxyx()
             resize_windows(max_y, max_x)
+        if CURRENT_WINDOW == command_win:
+            command = command_win.textbox.edit()
+            command_win.submit_command(command)
+            CURRENT_WINDOW = list_win
+            continue
+        c = textwin.getch()
         if c == curses.KEY_UP:
             CURRENT_WINDOW = list_win
             list_win.decrease_index()
@@ -199,13 +198,8 @@ def mainloop():
             CURRENT_WINDOW = command_win
             command_win.refresh()
         elif c in (curses.KEY_ENTER, 10):
-            if CURRENT_WINDOW == command_win:
-                command_win.submit_command()
-                CURRENT_WINDOW = list_win
-            elif CURRENT_WINDOW == list_win:
+            if CURRENT_WINDOW == list_win:
                 list_win.submit_change()
-        elif CURRENT_WINDOW == command_win:
-            command_win.addchr(chr(c))
         list_win.refresh()
 
 if __name__ == "__main__":
