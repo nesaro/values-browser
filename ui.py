@@ -7,8 +7,13 @@ CURRENT_WINDOW = None
 #create class to associate URL to content provider
 #put the content provider and the url on the topic bar
 
+#Create a context menu for URL (actions) and VALUE (actions)
 
-class DirectoryListService:
+class URLActionOptions:
+    def get_actions(url) -> 'list_of_actions names and services':
+        pass
+
+class DirectoryListService: #This is a type of list service?
     @staticmethod
     def to_list(path):
         import os
