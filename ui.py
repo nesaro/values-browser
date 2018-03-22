@@ -133,6 +133,7 @@ class ListWin(EventListener):
             self.win.erase()
             self.win.border()
             self.refresh()
+            EVENT_DISPATCHER.listen(ChangedURLServiceEvent(event.service, event.url))
 
     def refresh(self):
         win_y, win_x = self.win.getmaxyx()
