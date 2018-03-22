@@ -24,6 +24,10 @@ class CommandEvent:
     def __init__(self, command):
         self.command = command
 
+class CommandError:
+    def __init__(self, event):
+        self.event = event
+
 class InvalidURLServiceError:
     def __init__(self, event):
         self.event = event
@@ -55,6 +59,8 @@ class Supervisor(EventListener):
                 command = event.command[4:]
                 command = command.lstrip()
                 EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(DirectoryListService, command))
+            else:
+                EVENT_DISPATCHER.listen(CommandError(event))
                 
 
 class EventDispatcher(EventListener):
@@ -171,14 +177,18 @@ class CommandWindow(EventListener):
 
     def submit_command(self, last_command):
         last_command = last_command.lstrip('$').rstrip()
+        self.refresh()
         EVENT_DISPATCHER.listen(CommandEvent(last_command))
-        self.win.erase()
 
     def listen(self, event):
         if isinstance(event, InvalidURLServiceError):
             self.win.move(0, 0)
             self.win.addstr('INVALID URL {} for service {}'.format(event.event.url,
                                                                    event.event.service.__name__))
+            self.win.refresh()
+        elif isinstance(event, CommandError):
+            self.win.move(0, 0)
+            self.win.addstr('INVALID command {}'.format(event.event.command))
             self.win.refresh()
 
 class TopicWindow(EventListener):
@@ -236,8 +246,8 @@ def mainloop():
             resize_windows(max_y, max_x)
         if CURRENT_WINDOW == command_win:
             command = command_win.textbox.edit()
-            command_win.submit_command(command)
             CURRENT_WINDOW = list_win
+            command_win.submit_command(command)
             continue
         c = textwin.getch()
         if c == curses.KEY_UP:
