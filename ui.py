@@ -1,5 +1,8 @@
 import curses
 from curses.textpad import Textbox
+from collections import namedtuple
+
+ListElement = namedtuple('ListElement', ['url', 'display_string'])
 
 
 CURRENT_WINDOW = None 
@@ -15,11 +18,12 @@ class URLActionOptions:
 
 class DirectoryListService: #This is a type of list service?
     @staticmethod
-    def to_list(url):
+    def to_element_list(url):
         path = url[7:]
         import os
-        return sorted(list(os.listdir(path)))
-        raise Exception(os.listdir(path))
+        list_dir = sorted(list(os.listdir(path)))
+        return [ListElement(url="file://" + os.path.join(path, x),
+                            display_string=x) for x in list_dir]
 
     @staticmethod
     def test_url(url):
@@ -129,7 +133,7 @@ class ListWin(EventListener):
     @property
     def content(self):
         try:
-            return self.current_service.to_list(self.current_url)
+            return self.current_service.to_element_list(self.current_url)
         except AttributeError:
             return []
 
@@ -140,13 +144,12 @@ class ListWin(EventListener):
                 return
             self.current_service = event.service
             self.current_url = event.url
-            self.win.erase()
-            self.win.border()
-            self.refresh()
             EVENT_DISPATCHER.listen(ChangedURLServiceEvent(event.service, event.url))
+            self.redraw()
 
-    def refresh(self):
+    def redraw_content(self):
         win_y, win_x = self.win.getmaxyx()
+        #TODO if size is smaller, redraw win
         self.subpad.resize(max(len(self.content), 1),
                            max(win_x - 1, 1))
         for index, element in enumerate(self.content):
@@ -156,10 +159,14 @@ class ListWin(EventListener):
                 attributes |= curses.A_BOLD
             if index == self.current_index:
                 attributes |= curses.A_BLINK
-            self.subpad.addstr(element, attributes)
-        self.win.refresh()
+            self.subpad.addstr(element.display_string, attributes)
+        self.subpad.refresh(self.current_page * (win_y - 2) , 0, 2, 1,
+                            win_y - 1, win_x - 2)
+
+    def redraw(self):
         self.win.border()
-        self.subpad.refresh(self.current_page * (win_y - 2) , 0, 2, 1, win_y - 1, win_x - 1)
+        self.win.refresh()
+        self.redraw_content()
 
     def submit_change(self):
         import os.path
@@ -168,8 +175,7 @@ class ListWin(EventListener):
         except AttributeError:
             return
         EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(self.current_service,
-                                                      os.path.join(self.current_url,
-                                                                   element)))
+                                                             element.url))
 
 EVENT_DISPATCHER = EventDispatcher()
 
@@ -177,9 +183,9 @@ class CommandWindow(EventListener):
     def __init__(self, textbox):
         self.textbox = textbox
         self.win = textbox.win
-        self.refresh()
+        self.redraw()
 
-    def refresh(self):
+    def redraw(self):
         self.win.erase()
         self.win.move(0,0)
         if CURRENT_WINDOW is self:
@@ -188,7 +194,7 @@ class CommandWindow(EventListener):
 
     def submit_command(self, last_command):
         last_command = last_command.lstrip('$').rstrip()
-        self.refresh()
+        self.redraw()
         EVENT_DISPATCHER.listen(CommandEvent(last_command))
 
     def listen(self, event):
@@ -264,22 +270,25 @@ def mainloop():
         if c == curses.KEY_UP:
             CURRENT_WINDOW = list_win
             list_win.decrease_index()
+            list_win.redraw_content()
         elif c == curses.KEY_DOWN:
             CURRENT_WINDOW = list_win
             list_win.increase_index()
+            list_win.redraw_content()
         elif c == curses.KEY_NPAGE:
             CURRENT_WINDOW = list_win
             list_win.increase_index(20)
+            list_win.redraw_content()
         elif c == curses.KEY_PPAGE:
             CURRENT_WINDOW = list_win
             list_win.decrease_index(20)
+            list_win.redraw_content()
         elif c == 27:
             CURRENT_WINDOW = command_win
-            command_win.refresh()
+            command_win.redraw()
         elif c in (curses.KEY_ENTER, 10):
             if CURRENT_WINDOW == list_win:
                 list_win.submit_change()
-        list_win.refresh()
 
 if __name__ == "__main__":
     try:
