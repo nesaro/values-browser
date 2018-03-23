@@ -126,12 +126,24 @@ class ListWin(EventListener):
             raise AttributeError
 
     def decrease_index(self, amount=1):
+        previous_index = self.__current_index
         self.__current_index = min(len(self.content) - 1,
                                    max(self.__current_index - amount , 0))
+        try:
+            self.__redraw_index(previous_index, self.content[previous_index])
+        except IndexError:
+            pass
+        self.__redraw_index(self.__current_index, self.current_element)
 
     def increase_index(self, amount=1):
+        previous_index = self.__current_index
         self.__current_index = min(self.__current_index + amount,
                                    len(self.content) - 1)
+        try:
+            self.__redraw_index(previous_index, self.content[previous_index])
+        except IndexError:
+            pass
+        self.__redraw_index(self.__current_index, self.current_element)
 
     @property
     def content(self):
@@ -150,19 +162,26 @@ class ListWin(EventListener):
             EVENT_DISPATCHER.listen(ChangedURLServiceEvent(event.service, event.url))
             self.redraw()
 
+    def __redraw_index(self, index, element):
+        self.subpad.move(index, 1)
+        attributes = 0
+        if element == self.current_element:
+            attributes |= curses.A_BOLD
+        if index == self.current_index:
+            attributes |= curses.A_BLINK
+        self.subpad.addstr(element.display_string, attributes)
+        win_y, win_x = self.win.getmaxyx()
+        self.subpad.refresh(self.current_page * (win_y - 2) , 0, 2, 1,
+                            win_y - 1, win_x - 2)
+
     def redraw_content(self):
         win_y, win_x = self.win.getmaxyx()
         #TODO if size is smaller, redraw win
         self.subpad.resize(max(len(self.content), 1),
                            max(win_x - 1, 1))
         for index, element in enumerate(self.content):
-            self.subpad.move(index, 1)
-            attributes = 0
-            if element == self.current_element:
-                attributes |= curses.A_BOLD
-            if index == self.current_index:
-                attributes |= curses.A_BLINK
-            self.subpad.addstr(element.display_string, attributes)
+            self.__redraw_index(index, element)
+
         self.subpad.refresh(self.current_page * (win_y - 2) , 0, 2, 1,
                             win_y - 1, win_x - 2)
 
@@ -281,16 +300,12 @@ def mainloop():
         c = textwin.getch()
         if CURRENT_WINDOW == list_win and c == curses.KEY_UP:
             list_win.decrease_index()
-            list_win.redraw_content()
         elif CURRENT_WINDOW == list_win and c == curses.KEY_DOWN:
             list_win.increase_index()
-            list_win.redraw_content()
         elif CURRENT_WINDOW == list_win and c == curses.KEY_NPAGE:
             list_win.increase_index(20)
-            list_win.redraw_content()
         elif CURRENT_WINDOW == list_win and c == curses.KEY_PPAGE:
             list_win.decrease_index(20)
-            list_win.redraw_content()
         elif c == curses.KEY_F1 and CURRENT_WINDOW == help_window:
             help_window.hide()
             list_win.panel.top()
