@@ -1,4 +1,5 @@
 import curses
+import curses.panel
 from curses.textpad import Textbox
 from collections import namedtuple
 
@@ -91,6 +92,8 @@ class EventDispatcher(EventListener):
 class ListWin(EventListener):
     def __init__(self, window, subpad):
         self.win = window
+        self.panel = curses.panel.new_panel(window)
+        self.panel.move(1, 0)
         self.win.border()
         self.win.refresh()
         self.subpad = subpad
@@ -186,8 +189,7 @@ class CommandWindow(EventListener):
         self.redraw()
 
     def redraw(self):
-        self.win.erase()
-        self.win.move(0,0)
+        self.win.clear()
         if CURRENT_WINDOW is self:
             self.win.addstr('$', curses.color_pair(2))
         self.win.refresh()
@@ -199,12 +201,10 @@ class CommandWindow(EventListener):
 
     def listen(self, event):
         if isinstance(event, InvalidURLServiceError):
-            self.win.move(0, 0)
             self.win.addstr('INVALID URL {} for service {}'.format(event.event.url,
                                                                    event.event.service.__name__))
             self.win.refresh()
         elif isinstance(event, CommandError):
-            self.win.move(0, 0)
             self.win.addstr('INVALID command {}'.format(event.event.command))
             self.win.refresh()
 
@@ -213,17 +213,28 @@ class TopicWindow(EventListener):
         self.win = window
         self.win.move(0, 1)
         self.win.addstr('TOPIC', curses.color_pair(1))
-        self.refresh()
-
-    def refresh(self):
-        self.win.refresh()
 
     def listen(self, event):
         if isinstance(event, ChangedURLServiceEvent):
-            self.win.erase()
-            self.win.move(0, 1)
+            self.win.clear()
             self.win.addstr(event.service.__name__ + ' ' + event.url)
-            self.refresh()
+            self.win.refresh()
+
+
+class HelpWindow:
+    def __init__(self, stdscr):
+        max_y, max_x = stdscr.getmaxyx()
+        self.panel = curses.panel.new_panel(curses.newwin(20, 20, 2, 2))
+        self.panel.move(2, 1)
+
+    def display(self):
+        win = self.panel.window()
+        win.bkgd('c')
+        win.refresh()
+        self.panel.show()
+
+    def hide(self):
+        self.panel.hide()
 
 
 def mainloop():
@@ -237,6 +248,7 @@ def mainloop():
     list_win = ListWin(curses.newwin(max_y - 2, max_x, 1, 0), curses.newpad(20, 20))
     textwin = curses.newwin(1, max_x, max_y-1, 0)
     textbox = Textbox(textwin)
+    help_window = HelpWindow(stdscr)
     command_win = CommandWindow(textbox)
     global CURRENT_WINDOW, EVENT_DISPATCHER
     supervisor = Supervisor()
@@ -267,22 +279,30 @@ def mainloop():
             command_win.submit_command(command)
             continue
         c = textwin.getch()
-        if c == curses.KEY_UP:
-            CURRENT_WINDOW = list_win
+        if CURRENT_WINDOW == list_win and c == curses.KEY_UP:
             list_win.decrease_index()
             list_win.redraw_content()
-        elif c == curses.KEY_DOWN:
-            CURRENT_WINDOW = list_win
+        elif CURRENT_WINDOW == list_win and c == curses.KEY_DOWN:
             list_win.increase_index()
             list_win.redraw_content()
-        elif c == curses.KEY_NPAGE:
-            CURRENT_WINDOW = list_win
+        elif CURRENT_WINDOW == list_win and c == curses.KEY_NPAGE:
             list_win.increase_index(20)
             list_win.redraw_content()
-        elif c == curses.KEY_PPAGE:
-            CURRENT_WINDOW = list_win
+        elif CURRENT_WINDOW == list_win and c == curses.KEY_PPAGE:
             list_win.decrease_index(20)
             list_win.redraw_content()
+        elif c == curses.KEY_F1 and CURRENT_WINDOW == help_window:
+            help_window.hide()
+            list_win.panel.top()
+            CURRENT_WINDOW = list_win
+            curses.panel.update_panels()
+            curses.doupdate()
+        elif c == curses.KEY_F1 and CURRENT_WINDOW == list_win:
+            help_window.display()
+            list_win.panel.bottom()
+            CURRENT_WINDOW = help_window
+            curses.panel.update_panels()
+            curses.doupdate()
         elif c == 27:
             CURRENT_WINDOW = command_win
             command_win.redraw()
