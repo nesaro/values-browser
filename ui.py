@@ -15,14 +15,18 @@ class URLActionOptions:
 
 class DirectoryListService: #This is a type of list service?
     @staticmethod
-    def to_list(path):
+    def to_list(url):
+        path = url[7:]
         import os
         return sorted(list(os.listdir(path)))
         raise Exception(os.listdir(path))
 
     @staticmethod
-    def test_url(path):
+    def test_url(url):
         import os
+        if not url.startswith('file://'):
+            return False
+        path = url[7:]
         return os.path.isdir(path)
 
 class CommandEvent:
@@ -61,9 +65,10 @@ class Supervisor(EventListener):
             if event.command == ':q':
                 self.exit = True
             if event.command.startswith('dir'):
-                command = event.command[4:]
-                command = command.lstrip()
-                EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(DirectoryListService, command))
+                url = event.command[4:]
+                url = url.lstrip()
+                url = "file://" + url
+                EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(DirectoryListService, url))
             else:
                 EVENT_DISPATCHER.listen(CommandError(event))
                 
