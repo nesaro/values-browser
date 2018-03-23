@@ -143,7 +143,10 @@ class ListWin(EventListener):
             self.__redraw_index(previous_index, self.content[previous_index])
         except IndexError:
             pass
-        self.__redraw_index(self.__current_index, self.current_element)
+        try:
+            self.__redraw_index(self.__current_index, self.current_element)
+        except AttributeError:
+            pass
 
     @property
     def content(self):
@@ -232,6 +235,7 @@ class TopicWindow(EventListener):
         self.win = window
         self.win.move(0, 1)
         self.win.addstr('TOPIC', curses.color_pair(1))
+        self.win.refresh()
 
     def listen(self, event):
         if isinstance(event, ChangedURLServiceEvent):
