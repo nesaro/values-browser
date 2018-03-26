@@ -253,7 +253,14 @@ class HelpWindow:
 
     def display(self):
         win = self.panel.window()
-        win.bkgd('c')
+        win.erase()
+        win.border()
+        lines = (':u  Change URL',
+                 ':s  Change Service',
+                 ':q  exit')
+        for index, line in enumerate(lines):
+            win.move(1+index,1)
+            win.addstr(line)
         win.refresh()
         self.panel.show()
 
