@@ -240,7 +240,8 @@ class TopicWindow(EventListener):
     def listen(self, event):
         if isinstance(event, ChangedURLServiceEvent):
             self.win.clear()
-            self.win.addstr(event.service.__name__ + ' ' + event.url)
+            self.win.addstr(event.service.__name__ + ' ')
+            self.win.addstr(event.url, curses.color_pair(2))
             self.win.refresh()
 
 
@@ -315,6 +316,7 @@ def mainloop():
             list_win.panel.top()
             CURRENT_WINDOW = list_win
             curses.panel.update_panels()
+            list_win.redraw_content()
             curses.doupdate()
         elif c == curses.KEY_F1 and CURRENT_WINDOW == list_win:
             help_window.display()
