@@ -1,9 +1,8 @@
 import curses
 import curses.panel
 from curses.textpad import Textbox
-from collections import namedtuple
+from services import DirectoryListService
 
-ListElement = namedtuple('ListElement', ['url', 'display_string'])
 
 
 CURRENT_WINDOW = None 
@@ -16,23 +15,6 @@ CURRENT_WINDOW = None
 class URLActionOptions:
     def get_actions(url) -> 'list_of_actions names and services':
         pass
-
-class DirectoryListService: #This is a type of list service?
-    @staticmethod
-    def to_element_list(url):
-        path = url[7:]
-        import os
-        list_dir = sorted(list(os.listdir(path)))
-        return [ListElement(url="file://" + os.path.join(path, x),
-                            display_string=x) for x in list_dir]
-
-    @staticmethod
-    def test_url(url):
-        import os
-        if not url.startswith('file://'):
-            return False
-        path = url[7:]
-        return os.path.isdir(path)
 
 class CommandEvent:
     def __init__(self, command):
@@ -194,7 +176,6 @@ class ListWin(EventListener):
         self.redraw_content()
 
     def submit_change(self):
-        import os.path
         try:
             element = self.current_element
         except AttributeError:
