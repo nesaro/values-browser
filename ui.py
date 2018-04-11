@@ -6,6 +6,7 @@ from services import DirectoryListService
 
 
 CURRENT_WINDOW = None 
+CONTENT_HISTORY = []
 
 #create class to associate URL to content provider
 #put the content provider and the url on the topic bar
@@ -58,6 +59,9 @@ class Supervisor(EventListener):
                 EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(DirectoryListService, url))
             else:
                 EVENT_DISPATCHER.listen(CommandError(event))
+        if isinstance(event, ChangedURLServiceEvent):
+            global CONTENT_HISTORY
+            CONTENT_HISTORY.append(event.url)
                 
 
 class EventDispatcher(EventListener):
