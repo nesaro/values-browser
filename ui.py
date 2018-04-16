@@ -3,7 +3,9 @@ import curses.panel
 from collections import namedtuple
 from curses.textpad import Textbox
 from services import DirectoryListService, HistoryService
-
+from events import (CommandEvent, CommandError, InvalidURLServiceError,
+                    RequestChangeURLServiceEvent, ChangedURLServiceEvent,
+                    EventListener, EventDispatcher)
 
 HistoryElement = namedtuple('HistoryElement', ['service', 'url'])
 
@@ -19,33 +21,6 @@ HISTORY_SERVICE = HistoryService(CONTENT_HISTORY)
 class URLActionOptions:
     def get_actions(url) -> 'list_of_actions names and services':
         pass
-
-class CommandEvent:
-    def __init__(self, command):
-        self.command = command
-
-class CommandError:
-    def __init__(self, event):
-        self.event = event
-
-class InvalidURLServiceError:
-    def __init__(self, event):
-        self.event = event
-
-class RequestChangeURLServiceEvent:
-    def __init__(self, service, url):
-        self.service = service
-        self.url = url
-
-class ChangedURLServiceEvent:
-    def __init__(self, service, url):
-        self.service = service
-        self.url = url
-
-
-class EventListener:
-    def listen(self, event):
-        return
 
 class Supervisor(EventListener):
     def __init__(self):
@@ -69,17 +44,6 @@ class Supervisor(EventListener):
             global CONTENT_HISTORY
             CONTENT_HISTORY.append(HistoryElement(event.service, event.url))
                 
-
-class EventDispatcher(EventListener):
-    def __init__(self):
-        self.listeners = []
-
-    def register(self, listener):
-        self.listeners.append(listener)
-
-    def listen(self, event):
-        for x in self.listeners:
-            x.listen(event)
 
 class ListWin(EventListener):
     def __init__(self, window, subpad):
