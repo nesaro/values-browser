@@ -154,7 +154,8 @@ class ListWin(EventListener):
                 return
             self.current_service = event.service
             self.current_url = event.url
-            EVENT_DISPATCHER.listen(ChangedURLServiceEvent(event.service, event.url))
+            EVENT_DISPATCHER.listen(ChangedURLServiceEvent(event.service,
+                                                           event.url))
             self.redraw()
 
     def __redraw_index(self, index, element):
@@ -190,7 +191,7 @@ class ListWin(EventListener):
             element = self.current_element
         except AttributeError:
             return
-        EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(self.current_service,
+        EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(element.service,
                                                              element.url))
 
 EVENT_DISPATCHER = EventDispatcher()
@@ -214,10 +215,14 @@ class CommandWindow(EventListener):
 
     def listen(self, event):
         if isinstance(event, InvalidURLServiceError):
-            self.win.addstr('INVALID URL {} for service {}'.format(event.event.url,
-                                                                   str(event.event.service)))
+            url_str = str(event.event.url)
+            service_str = str(event.event.service)
+            self.win.move(0, 1)
+            self.win.addstr('INVALID URL {} for service {}'.format(url_str,
+                                                                   service_str))
             self.win.refresh()
         elif isinstance(event, CommandError):
+            self.win.move(0, 1)
             self.win.addstr('INVALID command {}'.format(event.event.command))
             self.win.refresh()
 
@@ -233,7 +238,6 @@ class TopicWindow(EventListener):
             self.win.clear()
             self.win.addstr(str(event.service) + ' ')
             self.win.addstr(event.url, curses.color_pair(2))
-            self.win.addstr(str(CONTENT_HISTORY), curses.color_pair(2))
             self.win.refresh()
 
 
