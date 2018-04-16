@@ -1,12 +1,15 @@
 import curses
 import curses.panel
+from collections import namedtuple
 from curses.textpad import Textbox
-from services import DirectoryListService
+from services import DirectoryListService, HistoryService
 
 
+HistoryElement = namedtuple('HistoryElement', ['service', 'url'])
 
 CURRENT_WINDOW = None 
 CONTENT_HISTORY = []
+HISTORY_SERVICE = HistoryService(CONTENT_HISTORY)
 
 #create class to associate URL to content provider
 #put the content provider and the url on the topic bar
@@ -57,11 +60,14 @@ class Supervisor(EventListener):
                 url = url.lstrip()
                 url = "file://" + url
                 EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(DirectoryListService, url))
+            elif event.command.startswith('log'):
+                url = "log://" 
+                EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(HISTORY_SERVICE, url))
             else:
                 EVENT_DISPATCHER.listen(CommandError(event))
         if isinstance(event, ChangedURLServiceEvent):
             global CONTENT_HISTORY
-            CONTENT_HISTORY.append(event.url)
+            CONTENT_HISTORY.append(HistoryElement(event.service, event.url))
                 
 
 class EventDispatcher(EventListener):
@@ -209,7 +215,7 @@ class CommandWindow(EventListener):
     def listen(self, event):
         if isinstance(event, InvalidURLServiceError):
             self.win.addstr('INVALID URL {} for service {}'.format(event.event.url,
-                                                                   event.event.service.__name__))
+                                                                   str(event.event.service)))
             self.win.refresh()
         elif isinstance(event, CommandError):
             self.win.addstr('INVALID command {}'.format(event.event.command))
@@ -225,8 +231,9 @@ class TopicWindow(EventListener):
     def listen(self, event):
         if isinstance(event, ChangedURLServiceEvent):
             self.win.clear()
-            self.win.addstr(event.service.__name__ + ' ')
+            self.win.addstr(str(event.service) + ' ')
             self.win.addstr(event.url, curses.color_pair(2))
+            self.win.addstr(str(CONTENT_HISTORY), curses.color_pair(2))
             self.win.refresh()
 
 

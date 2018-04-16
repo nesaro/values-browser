@@ -18,3 +18,16 @@ class DirectoryListService: #This is a type of list service?
         path = url[7:]
         return os.path.isdir(path)
 
+class HistoryService:
+    def __init__(self, content_history):
+        self.content_history = content_history
+
+    def to_element_list(self, _):
+        return [ListElement(url=x.url,
+                            display_string=x.url) for x in self.content_history]
+
+    @staticmethod
+    def test_url(url):
+        return url.startswith('log://')
+
+
