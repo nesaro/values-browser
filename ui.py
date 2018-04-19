@@ -2,7 +2,7 @@ import curses
 import curses.panel
 from collections import namedtuple
 from curses.textpad import Textbox
-from services import DirectoryListService, HistoryService
+from services import DirectoryListService, HistoryService, GuessService
 from events import (CommandEvent, CommandError, InvalidURLServiceError,
                     RequestChangeURLServiceEvent, ChangedURLServiceEvent,
                     EventListener, EventDispatcher)
@@ -38,6 +38,10 @@ class Supervisor(EventListener):
             elif event.command.startswith('log'):
                 url = "log://" 
                 EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(HISTORY_SERVICE, url))
+            elif event.command.startswith('guess'):
+                url = event.command[6:]
+                url = url.lstrip()
+                EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(GuessService, url))
             else:
                 EVENT_DISPATCHER.listen(CommandError(event))
         if isinstance(event, ChangedURLServiceEvent):
@@ -89,7 +93,12 @@ class ListWin(EventListener):
             self.__redraw_index(previous_index, self.content[previous_index])
         except IndexError:
             pass
-        self.__redraw_index(self.__current_index, self.current_element)
+        try:
+            current_element = self.current_element
+        except AttributeError:
+            pass
+        else:
+            self.__redraw_index(self.__current_index, current_element)
 
     def increase_index(self, amount=1):
         previous_index = self.__current_index
