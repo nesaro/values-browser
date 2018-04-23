@@ -22,9 +22,13 @@ class DirectoryListService: #This is a type of list service?
     def to_element_list(url):
         path = url[7:]
         list_dir = sorted(list(os.listdir(path)))
-        return [ListElement(url="file://" + os.path.join(path, x),
+        previous_directory = [ListElement(url="file://" + os.path.split(path)[0],
+                                          display_string="..",
+                                          service=DirectoryListService)]
+        dir_content = [ListElement(url="file://" + os.path.join(path, x),
                             display_string=x,
-                            service=DirectoryListService) for x in list_dir]
+                            service=DirectoryListService) for x in list_dir]                 
+        return previous_directory + dir_content
 
     @staticmethod
     def test_url(url):
