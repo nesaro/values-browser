@@ -138,6 +138,7 @@ class ListWin(EventListener):
             attributes |= curses.A_BOLD
         if index == self.current_index:
             attributes |= curses.A_BLINK
+        self.subpad.clrtoeol()
         self.subpad.addstr(element.display_string, attributes)
         win_y, win_x = self.win.getmaxyx()
         self.subpad.refresh(self.current_page * (win_y - 2) , 0, 2, 1,
