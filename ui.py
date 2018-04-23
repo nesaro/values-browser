@@ -13,15 +13,6 @@ CURRENT_WINDOW = None
 CONTENT_HISTORY = []
 HISTORY_SERVICE = HistoryService(CONTENT_HISTORY)
 
-#create class to associate URL to content provider
-#put the content provider and the url on the topic bar
-
-#Create a context menu for URL (actions) and VALUE (actions)
-
-class URLActionOptions:
-    def get_actions(url) -> 'list_of_actions names and services':
-        pass
-
 class Supervisor(EventListener):
     def __init__(self):
         self.exit = False
