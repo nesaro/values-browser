@@ -1,6 +1,6 @@
 #Values manager
 
-Ncurses interface that allows to browse relationships between values.
+Ncurses interface that allows to browse relationships between values. It is developed using CQRS-ish and abstracting events and signals
 
 ##Example 1: File list manager
 
