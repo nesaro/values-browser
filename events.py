@@ -36,3 +36,4 @@ class EventDispatcher(EventListener):
         for x in self.listeners:
             x.listen(event)
 
+EVENT_DISPATCHER = EventDispatcher()

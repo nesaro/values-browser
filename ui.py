@@ -1,44 +1,14 @@
 import curses
 import curses.panel
-from collections import namedtuple
 from curses.textpad import Textbox
-from services import DirectoryListService, HistoryService, GuessService
 from events import (CommandEvent, CommandError, InvalidURLServiceError,
                     RequestChangeURLServiceEvent, ChangedURLServiceEvent,
-                    EventListener, EventDispatcher)
+                    EventListener, EVENT_DISPATCHER)
 
-HistoryElement = namedtuple('HistoryElement', ['service', 'url'])
+from supervisor import Supervisor
 
 CURRENT_WINDOW = None 
-CONTENT_HISTORY = []
-HISTORY_SERVICE = HistoryService(CONTENT_HISTORY)
 
-class Supervisor(EventListener):
-    def __init__(self):
-        self.exit = False
-
-    def listen(self, event):
-        if isinstance(event, CommandEvent):
-            if event.command == ':q':
-                self.exit = True
-            if event.command.startswith('dir'):
-                url = event.command[4:]
-                url = url.lstrip()
-                url = "file://" + url
-                EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(DirectoryListService, url))
-            elif event.command.startswith('log'):
-                url = "log://" 
-                EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(HISTORY_SERVICE, url))
-            elif event.command.startswith('guess'):
-                url = event.command[6:]
-                url = url.lstrip()
-                EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(GuessService, url))
-            else:
-                EVENT_DISPATCHER.listen(CommandError(event))
-        if isinstance(event, ChangedURLServiceEvent):
-            global CONTENT_HISTORY
-            CONTENT_HISTORY.append(HistoryElement(event.service, event.url))
-                
 
 class ListWin(EventListener):
     def __init__(self, window, subpad):
@@ -159,7 +129,6 @@ class ListWin(EventListener):
         EVENT_DISPATCHER.listen(RequestChangeURLServiceEvent(element.service,
                                                              element.url))
 
-EVENT_DISPATCHER = EventDispatcher()
 
 class CommandWindow(EventListener):
     def __init__(self, textbox):
