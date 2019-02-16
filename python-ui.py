@@ -78,9 +78,12 @@ if __name__ == "__main__":
     list_value, commander = list_value_and_commander_factory()
     commander.submit_command('dir /')
     from pprint import pprint
+    pprint("dir /")
     pprint(list_value.content)
     commander.submit_command('dir /tmp')
+    pprint("dir /tmp")
     pprint(list_value.content)
+    pprint("CURRENT ELEMENT")
     pprint(list_value.current_element)
 
     
