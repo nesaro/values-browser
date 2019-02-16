@@ -2,36 +2,15 @@ from events import (CommandEvent, CommandError, InvalidURLServiceError,
                     RequestChangeURLServiceEvent, ChangedURLServiceEvent,
                     EventListener, EVENT_DISPATCHER)
 
+from shapes import ListShape
+
 from supervisor import Supervisor
 
-class ListQuery(EventListener):
+class ListQuery(EventListener, ListShape):
     def __init__(self):
+        ListShape.__init__(self)
         self.current_service = None
         self.current_url = None
-        self.__current_index = 0
-
-    @property
-    def current_index(self):
-        if not self.content:
-            return 0
-        return max(0, min(self.__current_index, len(self.content) - 1))
-
-    @property
-    def current_element(self):
-        try:
-            return self.content[self.current_index]
-        except IndexError:
-            raise AttributeError
-
-    def decrease_index(self, amount=1):
-        previous_index = self.__current_index
-        self.__current_index = min(len(self.content) - 1,
-                                   max(self.__current_index - amount , 0))
-
-    def increase_index(self, amount=1):
-        previous_index = self.__current_index
-        self.__current_index = min(self.__current_index + amount,
-                                   len(self.content) - 1)
 
     @property
     def content(self):

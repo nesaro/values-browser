@@ -6,12 +6,14 @@ from events import (CommandEvent, CommandError, InvalidURLServiceError,
                     EventListener, EVENT_DISPATCHER)
 
 from supervisor import Supervisor
+from shapes import ListShape
 
 CURRENT_WINDOW = None 
 
 
-class ListWin(EventListener):
+class ListWin(EventListener, ListShape):
     def __init__(self, window, subpad):
+        ListShape.__init__(self)
         self.win = window
         self.panel = curses.panel.new_panel(window)
         self.panel.move(1, 0)
@@ -20,7 +22,6 @@ class ListWin(EventListener):
         self.subpad = subpad
         self.current_service = None
         self.current_url = None
-        self.__current_index = 0
 
     @property
     def row_size(self):
@@ -33,23 +34,9 @@ class ListWin(EventListener):
             return 0
         return self.current_index // self.row_size
 
-    @property
-    def current_index(self):
-        if not self.content:
-            return 0
-        return max(0, min(self.__current_index, len(self.content) - 1))
-
-    @property
-    def current_element(self):
-        try:
-            return self.content[self.current_index]
-        except IndexError:
-            raise AttributeError
-
     def decrease_index(self, amount=1):
-        previous_index = self.__current_index
-        self.__current_index = min(len(self.content) - 1,
-                                   max(self.__current_index - amount , 0))
+        previous_index = self._current_index
+        ListShape.decrease_index(self, amount)
         try:
             self.__redraw_index(previous_index, self.content[previous_index])
         except IndexError:
@@ -59,18 +46,17 @@ class ListWin(EventListener):
         except AttributeError:
             pass
         else:
-            self.__redraw_index(self.__current_index, current_element)
+            self.__redraw_index(self._current_index, current_element)
 
     def increase_index(self, amount=1):
-        previous_index = self.__current_index
-        self.__current_index = min(self.__current_index + amount,
-                                   len(self.content) - 1)
+        previous_index = self._current_index
+        ListShape.increase_index(self, amount)
         try:
             self.__redraw_index(previous_index, self.content[previous_index])
         except IndexError:
             pass
         try:
-            self.__redraw_index(self.__current_index, self.current_element)
+            self.__redraw_index(self._current_index, self.current_element)
         except AttributeError:
             pass
 
