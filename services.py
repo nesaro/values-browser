@@ -3,7 +3,16 @@ from collections import namedtuple
 
 ListElement = namedtuple('ListElement', ['url', 'display_string', 'service'])
 
-class GuessService:
+class Service:
+    @staticmethod
+    def to_element_list(url):
+        raise NotImplementedError
+
+    @staticmethod
+    def test_url(_):
+        raise NotImplementedError
+
+class GuessService(Service):
     @staticmethod
     def to_element_list(url):
         if url.startswith('file://'):
@@ -17,7 +26,7 @@ class GuessService:
         return True
 
 
-class DirectoryListService: #This is a type of list service?
+class DirectoryListService(Service): #This is a type of list service?
     @staticmethod
     def to_element_list(url):
         path = url[7:]
@@ -39,7 +48,7 @@ class DirectoryListService: #This is a type of list service?
 
 
 
-class HistoryService:
+class HistoryService(Service):
     def __init__(self, content_history):
         self.content_history = content_history
 

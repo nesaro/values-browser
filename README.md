@@ -1,8 +1,12 @@
-# ncurses-ui Values manager
+# Values manager
+
+This is an experiment on two things: CQRS and ontologies as concept
+
+## ncurses-ui Values manager
 
 Ncurses interface that allows to browse relationships between values. It is developed using CQRS-ish and abstracting events and signals
 
-## Example 1: File list manager
+### Example 1: File list manager
 
 Usage:
 
